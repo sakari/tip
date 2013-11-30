@@ -23,4 +23,5 @@ data Expression = Expression {
 
 data Expr = Identifier { identifierName :: String }
           | Application { callee :: Expression, arguments :: [Expression]}
+          | Index { callee :: Expression, index :: Expression }
             deriving Show

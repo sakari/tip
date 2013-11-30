@@ -28,9 +28,11 @@ parseIdentifier = Identifier <$> identifier t
 parseExprTerminal = Expression <$> getPosition <*> parseIdentifier
 
 parseApplyList = parens t $ commaSep t parseExpression
+parseIndex = brackets t $ parseExpression
 
-parseApplication callee = Expression <$> getPosition <*> app
+parseApplication callee = Expression <$> getPosition <*> (app <|> index)
     where
+      index = Index callee <$> parseIndex
       app = Application callee <$> parseApplyList
 
 

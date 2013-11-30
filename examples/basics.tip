@@ -5,5 +5,8 @@
 // function application
 someFunc(a, b, c)
 
+//map index
+someMap[foo]
+
 // multiple statements in the same line
 someIdentifier aa
