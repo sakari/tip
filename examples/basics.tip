@@ -1,8 +1,9 @@
+//line comment
+/* block comment
+ /* which is nested */
+*/
+// function application
+someFunc(a, b, c)
+
 // multiple statements in the same line
 someIdentifier aa
-
-/* block comment
-*/
-aa
-
-a

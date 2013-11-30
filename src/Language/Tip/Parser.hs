@@ -24,7 +24,21 @@ t = makeTokenParser def
 
 
 parseIdentifier = Identifier <$> identifier t
-parseExpression = Expression <$> getPosition <*> parseIdentifier
+
+parseExprTerminal = Expression <$> getPosition <*> parseIdentifier
+
+parseApplyList = parens t $ commaSep t parseExpression
+
+parseApplication callee = Expression <$> getPosition <*> app
+    where
+      app = Application callee <$> parseApplyList
+
+
+parseExpression = do
+  t <- parseExprTerminal
+  option t $ do
+    parseApplication t
+
 parseStatement = Statement <$> getPosition <*> (ExpressionStmt <$> parseExpression)
 parser path = Module path <$> (whiteSpace t *> many parseStatement <* eof)
 

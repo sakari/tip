@@ -21,4 +21,6 @@ data Expression = Expression {
     , expr :: Expr
     } deriving Show
 
-data Expr = Identifier { identifierName :: String } deriving Show
+data Expr = Identifier { identifierName :: String }
+          | Application { callee :: Expression, arguments :: [Expression]}
+            deriving Show
