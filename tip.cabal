@@ -15,7 +15,13 @@ category:            Language
 build-type:          Simple
 cabal-version:       >=1.8
 
+library
+  hs-source-dirs:      src
+  exposed-modules: Language.Tip.Parser
+  build-depends:       base ==4.6.*, parsec ==3.1.*
+
 executable tip
-  main-is: src/Main.hs
+  hs-source-dirs:      src
+  main-is: Main.hs
   -- other-modules:
-  build-depends:       base ==4.6.*
+  build-depends:       base ==4.6.*, parsec ==3.1.*
