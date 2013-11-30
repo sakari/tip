@@ -8,7 +8,8 @@ main = do
   r <- parse file
   case r of
     Left e -> do
-           putStrLn $ show e
+           print e
            exitFailure
-    Right _ -> do
+    Right ast -> do
            putStrLn "ok"
+           print ast

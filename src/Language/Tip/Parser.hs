@@ -26,7 +26,8 @@ t = makeTokenParser def
 parseIdentifier = Identifier <$> identifier t
 parseExpression = Expression <$> getPosition <*> parseIdentifier
 parseStatement = Statement <$> getPosition <*> (ExpressionStmt <$> parseExpression)
-parser path = Module path <$> many parseStatement
+parser path = Module path <$> (whiteSpace t *> many parseStatement <* eof)
+
 
 parse :: FilePath -> IO (Either ParseError Module)
 parse path = parseFromFile (parser path) path

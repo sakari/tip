@@ -1,1 +1,8 @@
-someIdentifier
+// multiple statements in the same line
+someIdentifier aa
+
+/* block comment
+*/
+aa
+
+a
