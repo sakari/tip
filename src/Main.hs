@@ -13,5 +13,4 @@ main = do
            print e
            exitFailure
     Right ast -> do
-           putStrLn "ok"
            print $ prettyPrint $ generate ast
