@@ -17,7 +17,7 @@ t = makeTokenParser def
                 , opStart = op
                 , opLetter = op
                 , reservedNames = []
-                , reservedOpNames = []
+                , reservedOpNames = ["="]
                 , caseSensitive = True
                 }
           op = oneOf "*/%-+.=<>"

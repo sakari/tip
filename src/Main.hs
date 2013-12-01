@@ -1,7 +1,9 @@
 module Main where
 import Language.Tip.Parser
+import Language.Tip.Generator
 import System.Environment
 import System.Exit
+import Language.ECMAScript3.PrettyPrint
 
 main = do
   (file:_) <- getArgs
@@ -12,4 +14,4 @@ main = do
            exitFailure
     Right ast -> do
            putStrLn "ok"
-           print ast
+           print $ prettyPrint $ generate ast
