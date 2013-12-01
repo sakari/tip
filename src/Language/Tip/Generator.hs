@@ -6,20 +6,32 @@ import qualified Language.ECMAScript3.Syntax as J
 generate :: Module -> [J.Statement ()]
 generate Module { moduleStatements } = map generateStmt moduleStatements
 
+generateBody :: [Statement] -> [J.Statement ()]
 generateBody stmts = go stmts
-    where go [s@Statement { stmt = ReturnStmt {} }] =
-              [generateStmt s]
-          go [Statement { stmt = ExpressionStmt { expression}}] =
-              [J.ReturnStmt () $ Just $ generateExpr expression]
-          go (s:ss) = (generateStmt s):(go ss)
-          go [] = []
+    where
+      go [s] = [addReturn s]
+      go (s:ss) = generateStmt s: go ss
+      go [] = []
+      addReturn s@Statement { stmt = ReturnStmt {} } =
+          generateStmt s
+      addReturn s@Statement { stmt = ExpressionStmt { expression }} =
+          J.ReturnStmt () $ Just $ generateExpr expression
+      addReturn s = generateStmt' generateBody s
 
-generateStmt Statement { stmt } = x stmt
+
+generateStmt stmt = generateStmt' (map generateStmt) stmt
+
+generateStmt' bodyGenerator Statement { stmt } = x stmt
     where
       x ExpressionStmt { expression } =
           J.ExprStmt () $ generateExpr expression
       x ReturnStmt { returnExpression } =
           J.ReturnStmt () $ generateExpr `fmap` returnExpression
+      x IfStmt { condition, ifBody, elseBranch } =
+          J.IfStmt () (generateExpr condition)
+               (J.BlockStmt () $ bodyGenerator ifBody)
+               (J.BlockStmt () $ bodyGenerator elseBranch)
+
 
 generateExpr Expression { expr } = x expr
     where

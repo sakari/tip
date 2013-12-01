@@ -11,5 +11,25 @@ assert(test1(true), 'explicit return')
 test2(a) {
     a
 }
-
 assert(test2(true), 'implicit return')
+
+// function returns from branches
+test3(a) {
+    if(a) {
+	a
+    } else {
+	false
+    }
+}
+assert(test3(true), 'return from branches')
+
+// but only if the branch is the last statement
+test4(a) {
+    if(a) {
+	false
+    } else {
+	false
+    }
+    a
+}
+assert(test4(true), 'return last statement')

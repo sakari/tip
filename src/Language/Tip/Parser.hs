@@ -16,7 +16,7 @@ t = makeTokenParser def
                 , identLetter = letter <|> digit <|> oneOf "_$"
                 , opStart = op
                 , opLetter = op
-                , reservedNames = ["return"]
+                , reservedNames = ["return", "if", "else"]
                 , reservedOpNames = ["="]
                 , caseSensitive = True
                 }
@@ -87,12 +87,17 @@ parseExpression = parseExprLhs `chainl1` parseExprRhs
         m <- parseOp <|> parseAssign
         return $ \l r -> Expression pos $ m l r
 
+statementOrBody = braces t (many parseStatement) <|> return `fmap` parseStatement
 
 parseStatement = Statement
                  <$> getPosition
                  <*> stmt <* optional (semi t)
     where
-      stmt = ret <|> expr
+      stmt = ret <|> conditional <|> expr
+      conditional = IfStmt
+                    <$> (reserved t "if" *> parens t parseExpression)
+                    <*> statementOrBody
+                    <*> option [] (reserved t "else" *> statementOrBody)
       ret = ReturnStmt <$> (reserved t "return" *> optionMaybe parseExpression)
       expr = ExpressionStmt <$> parseExpression
 parser path = Module path <$> (whiteSpace t *> many parseStatement <* eof)

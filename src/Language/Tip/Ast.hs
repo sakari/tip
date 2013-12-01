@@ -14,6 +14,9 @@ data Statement = Statement {
 
 data Stmt = ExpressionStmt { expression :: Expression }
           | ReturnStmt { returnExpression :: Maybe Expression }
+          | IfStmt { condition :: Expression
+                   , ifBody :: [Statement]
+                   , elseBranch:: [Statement] }
             deriving Show
 
 
