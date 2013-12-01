@@ -22,8 +22,7 @@ t = makeTokenParser def
                 }
           op = oneOf "*/%-+.=<>"
 
-parseIdentifier= Identifier <$> identifier t
-parseStringLiteral = StringLiteral <$> (lexeme t $ single <|> double)
+parseString = lexeme t $ single <|> double
     where
       double :: Parser String
       double = qq *> manyConcat pp <*qq
@@ -36,8 +35,19 @@ parseStringLiteral = StringLiteral <$> (lexeme t $ single <|> double)
       manyConcat parser = concat <$> many parser
       none str = noneOf str >>= \c -> return [c]
 
+parseSymbol = identifier t <|> parseString
+parseIdentifier= Identifier <$> identifier t
+parseStringLiteral = StringLiteral <$> parseString
+
 parseExpression = parseExprLhs `chainl1` parseExprRhs
     where
+      parseKeyValue = do
+        s <- parseSymbol
+        lexeme t $ string ":"
+        e <- parseExpression
+        return (s, e)
+      parseObject = Object <$> braces t (commaSep t $ parseKeyValue)
+      parseArray = Array <$> brackets t (commaSep t parseExpression)
       parseNumber = Number . either fromIntegral id <$> naturalOrFloat t
       parseParens = Parens <$> parens t parseExpression
       parseExprTerminal = Expression
@@ -45,7 +55,9 @@ parseExpression = parseExprLhs `chainl1` parseExprRhs
                           <*> (parseIdentifier
                                <|> parseParens
                                <|> parseNumber
-                               <|> parseStringLiteral)
+                               <|> parseStringLiteral
+                               <|> parseArray
+                               <|> parseObject )
       parseApplyList = parens t $ commaSep t parseExpression
       parseIndex = brackets t $ parseExpression
 

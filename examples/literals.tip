@@ -8,3 +8,13 @@
 "also with double quotes"
 'and multi
 line strings '
+
+// arrays. Note the need for semicolon to separate it from the
+// literal string. Otherwise it would be parsed as an array index
+;[1 , 2]
+
+// objects
+{
+    symbol: 1,
+    'string symbol': 2
+}

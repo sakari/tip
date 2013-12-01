@@ -22,6 +22,8 @@ data Expression = Expression {
     } deriving Show
 
 data Expr = Identifier { identifierName :: String }
+          | Object { object :: [(String, Expression)]}
+          | Array { elements :: [Expression]}
           | Parens { parenExpr :: Expression }
           | Number { number :: Double }
           | StringLiteral { stringLiteral :: String }
