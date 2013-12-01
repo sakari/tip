@@ -3,8 +3,8 @@ module Language.Tip.Parser where
 import Language.Tip.Ast
 import Text.Parsec
 import Text.Parsec.ByteString
+import Control.Applicative hiding ((<|>), many, optional)
 import Text.Parsec.Token
-import Control.Applicative hiding ((<|>), many)
 
 t = makeTokenParser def
     where def = LanguageDef {
@@ -22,26 +22,39 @@ t = makeTokenParser def
                 }
           op = oneOf "*/%-+.=<>"
 
+parseIdentifier= Identifier <$> identifier t
 
-parseIdentifier = Identifier <$> identifier t
-
-parseExprTerminal = Expression <$> getPosition <*> parseIdentifier
-
-parseApplyList = parens t $ commaSep t parseExpression
-parseIndex = brackets t $ parseExpression
-
-parseApplication callee = Expression <$> getPosition <*> (app <|> index)
+parseExpression = parseExprLhs `chainl1` parseExprRhs
     where
-      index = Index callee <$> parseIndex
-      app = Application callee <$> parseApplyList
+      parseParens = Parens <$> parens t parseExpression
+      parseExprTerminal = Expression
+                          <$> getPosition
+                          <*> (parseIdentifier <|> parseParens)
+      parseApplyList = parens t $ commaSep t parseExpression
+      parseIndex = brackets t $ parseExpression
+
+      parseApplication callee = Expression <$> getPosition <*> (app <|> index)
+          where
+            index = Index callee <$> parseIndex
+            app = Application callee <$> parseApplyList
+
+      parseExprLhs = do
+        t <- parseExprTerminal
+        option t $ do
+          parseApplication t
+
+      parseAssign = reservedOp t "=" >> return Assignment
+      parseOp = Op <$> operator t
+      parseMember = dot t >> return Member
+      parseExprRhs = do
+        pos <- getPosition
+        m <- parseMember <|> parseOp <|> parseAssign
+        return $ \l r -> Expression pos $ m l r
 
 
-parseExpression = do
-  t <- parseExprTerminal
-  option t $ do
-    parseApplication t
-
-parseStatement = Statement <$> getPosition <*> (ExpressionStmt <$> parseExpression)
+parseStatement = Statement
+                 <$> getPosition
+                 <*> (ExpressionStmt <$> parseExpression) <* optional (semi t)
 parser path = Module path <$> (whiteSpace t *> many parseStatement <* eof)
 
 

@@ -1,6 +1,6 @@
 //line comment
 /* block comment
- /* which is nested */
+
 */
 // function application
 someFunc(a, b, c)
@@ -8,5 +8,20 @@ someFunc(a, b, c)
 //map index
 someMap[foo]
 
-// multiple statements in the same line
-someIdentifier aa
+// operators
+someMap.foo
+a + a
+a * a
+a / a
+a % a
+a - a
+a < a
+a > a
+a <= a
+a >= a
+
+// assignment
+a = b
+
+// expression grouping with parens
+(a + b)

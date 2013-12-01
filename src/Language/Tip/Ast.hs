@@ -22,6 +22,10 @@ data Expression = Expression {
     } deriving Show
 
 data Expr = Identifier { identifierName :: String }
+          | Parens { parenExpr :: Expression }
           | Application { callee :: Expression, arguments :: [Expression]}
           | Index { callee :: Expression, index :: Expression }
+          | Member { lhs :: Expression, rhs :: Expression}
+          | Op { op :: String , lhs :: Expression, rhs :: Expression }
+          | Assignment { lhs :: Expression, rhs :: Expression }
             deriving Show
