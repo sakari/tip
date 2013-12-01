@@ -23,6 +23,8 @@ data Expression = Expression {
 
 data Expr = Identifier { identifierName :: String }
           | Parens { parenExpr :: Expression }
+          | Number { number :: Double }
+          | StringLiteral { stringLiteral :: String }
           | Application { callee :: Expression, arguments :: [Expression]}
           | Index { callee :: Expression, index :: Expression }
           | Member { lhs :: Expression, rhs :: Expression}

@@ -23,13 +23,29 @@ t = makeTokenParser def
           op = oneOf "*/%-+.=<>"
 
 parseIdentifier= Identifier <$> identifier t
+parseStringLiteral = StringLiteral <$> (lexeme t $ single <|> double)
+    where
+      double :: Parser String
+      double = qq *> manyConcat pp <*qq
+      qq = string "\""
+      pp = choice [string "\\\"", string "\\\\", none "\""]
+      single :: Parser String
+      single = q *> manyConcat p <* q
+      q = string "'"
+      p = choice [string "\\'", string "\\\\", none "'"]
+      manyConcat parser = concat <$> many parser
+      none str = noneOf str >>= \c -> return [c]
 
 parseExpression = parseExprLhs `chainl1` parseExprRhs
     where
+      parseNumber = Number . either fromIntegral id <$> naturalOrFloat t
       parseParens = Parens <$> parens t parseExpression
       parseExprTerminal = Expression
                           <$> getPosition
-                          <*> (parseIdentifier <|> parseParens)
+                          <*> (parseIdentifier
+                               <|> parseParens
+                               <|> parseNumber
+                               <|> parseStringLiteral)
       parseApplyList = parens t $ commaSep t parseExpression
       parseIndex = brackets t $ parseExpression
 
