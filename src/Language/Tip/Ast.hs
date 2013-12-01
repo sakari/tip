@@ -13,6 +13,7 @@ data Statement = Statement {
     } deriving Show
 
 data Stmt = ExpressionStmt { expression :: Expression }
+          | ReturnStmt { returnExpression :: Maybe Expression }
             deriving Show
 
 

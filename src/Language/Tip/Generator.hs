@@ -6,17 +6,27 @@ import qualified Language.ECMAScript3.Syntax as J
 generate :: Module -> [J.Statement ()]
 generate Module { moduleStatements } = map generateStmt moduleStatements
 
+generateBody stmts = go stmts
+    where go [s@Statement { stmt = ReturnStmt {} }] =
+              [generateStmt s]
+          go [Statement { stmt = ExpressionStmt { expression}}] =
+              [J.ReturnStmt () $ Just $ generateExpr expression]
+          go (s:ss) = (generateStmt s):(go ss)
+          go [] = []
+
 generateStmt Statement { stmt } = x stmt
     where
       x ExpressionStmt { expression } =
           J.ExprStmt () $ generateExpr expression
+      x ReturnStmt { returnExpression } =
+          J.ReturnStmt () $ generateExpr `fmap` returnExpression
 
 generateExpr Expression { expr } = x expr
     where
       x :: Expr -> J.Expression ()
       x Function { functionName, parameters, body } =
           J.FuncExpr () (J.Id () `fmap` functionName) (map (J.Id ()) parameters) $
-           map generateStmt body
+           generateBody body
       x Identifier { identifierName } =
           J.VarRef () $ J.Id () identifierName
       x Object { object } = J.ObjectLit () $ map g object
@@ -34,6 +44,7 @@ generateExpr Expression { expr } = x expr
           where
             iop | op == "<" = J.OpLT
                 | op == ">" = J.OpGT
+                | op == "==" = J.OpStrictEq
                 | op == ">=" = J.OpGEq
                 | op == "<=" = J.OpLEq
                 | op == "+" = J.OpAdd

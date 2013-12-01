@@ -1,0 +1,15 @@
+assert = require('assert')
+
+// functions can return explicitly
+test1(a) {
+    return a
+    false
+}
+assert(test1(true), 'explicit return')
+
+// all functions return the last statement
+test2(a) {
+    a
+}
+
+assert(test2(true), 'implicit return')
