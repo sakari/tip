@@ -1,0 +1,21 @@
+assert = require('assert')
+
+test1(a) {
+    fun(a) {
+	a = 1
+    }
+    fun(1)
+    a
+}
+assert(test1(true) == true, 'parameterlist rebinds variables')
+
+
+test2() {
+    fun() {
+	b = 1
+    }
+    b = 2
+    fun()
+    b
+}
+assert(test2() ==1, 'variables are hoisted to the outermost scope')
