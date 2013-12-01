@@ -12,9 +12,9 @@ data Statement = Statement {
     , stmt :: Stmt
     } deriving Show
 
-data Stmt = ExpressionStmt {
-      expression :: Expression
-    } deriving Show
+data Stmt = ExpressionStmt { expression :: Expression }
+            deriving Show
+
 
 data Expression = Expression {
       expressionPosition :: SourcePos
@@ -25,11 +25,13 @@ data Expr = Identifier { identifierName :: String }
           | Object { object :: [(String, Expression)]}
           | Array { elements :: [Expression]}
           | Parens { parenExpr :: Expression }
-          | Number { number :: Double }
+          | DoubleLiteral { double :: Double }
+          | IntLiteral { integer :: Int }
           | StringLiteral { stringLiteral :: String }
           | Application { callee :: Expression, arguments :: [Expression]}
           | Index { callee :: Expression, index :: Expression }
-          | Member { lhs :: Expression, rhs :: Expression}
+          | Member { lhs :: Expression, member :: String}
           | Op { op :: String , lhs :: Expression, rhs :: Expression }
           | Assignment { lhs :: Expression, rhs :: Expression }
+          | Function { functionName :: Maybe String, parameters :: [String], body :: [Statement] }
             deriving Show

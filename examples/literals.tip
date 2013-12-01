@@ -14,7 +14,7 @@ line strings '
 ;[1 , 2]
 
 // objects
-{
+k = {
     symbol: 1,
     'string symbol': 2
 }

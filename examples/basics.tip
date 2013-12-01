@@ -2,13 +2,27 @@
 /* block comment
 
 */
+
+// function definition
+someFunc(a, b) {
+    a + b
+}
+
+//lambdas
+p = (k) { k }
+
 // function application
-someFunc(a, b, c)
+someFunc(1, 2)
 
 //map index
+someMap = []
+foo = 1
 someMap[foo]
 
 // operators
+a = 2
+b = 2
+
 someMap.foo
 a + a
 a * a
@@ -24,4 +38,4 @@ a >= a
 a = b
 
 // expression grouping with parens
-(a + b)
+;(a + b)

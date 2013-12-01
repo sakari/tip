@@ -41,6 +41,11 @@ parseStringLiteral = StringLiteral <$> parseString
 
 parseExpression = parseExprLhs `chainl1` parseExprRhs
     where
+      parseFunction = try $ Function
+             <$> optionMaybe (identifier t)
+             <*> parens t (commaSep t $ identifier t)
+             <*> braces t (many parseStatement)
+
       parseKeyValue = do
         s <- parseSymbol
         lexeme t $ string ":"
@@ -48,11 +53,13 @@ parseExpression = parseExprLhs `chainl1` parseExprRhs
         return (s, e)
       parseObject = Object <$> braces t (commaSep t $ parseKeyValue)
       parseArray = Array <$> brackets t (commaSep t parseExpression)
-      parseNumber = Number . either fromIntegral id <$> naturalOrFloat t
+      parseNumber = either (IntLiteral . fromIntegral) DoubleLiteral
+                    <$> naturalOrFloat t
       parseParens = Parens <$> parens t parseExpression
       parseExprTerminal = Expression
                           <$> getPosition
-                          <*> (parseIdentifier
+                          <*> (parseFunction
+                               <|> parseIdentifier
                                <|> parseParens
                                <|> parseNumber
                                <|> parseStringLiteral
@@ -60,9 +67,11 @@ parseExpression = parseExprLhs `chainl1` parseExprRhs
                                <|> parseObject )
       parseApplyList = parens t $ commaSep t parseExpression
       parseIndex = brackets t $ parseExpression
-
-      parseApplication callee = Expression <$> getPosition <*> (app <|> index)
+      parseApplication callee = Expression
+                                <$> getPosition
+                                <*> (app <|> index <|> member)
           where
+            member = Member callee <$> (dot t *> identifier t)
             index = Index callee <$> parseIndex
             app = Application callee <$> parseApplyList
 
@@ -73,16 +82,17 @@ parseExpression = parseExprLhs `chainl1` parseExprRhs
 
       parseAssign = reservedOp t "=" >> return Assignment
       parseOp = Op <$> operator t
-      parseMember = dot t >> return Member
       parseExprRhs = do
         pos <- getPosition
-        m <- parseMember <|> parseOp <|> parseAssign
+        m <- parseOp <|> parseAssign
         return $ \l r -> Expression pos $ m l r
 
 
 parseStatement = Statement
                  <$> getPosition
-                 <*> (ExpressionStmt <$> parseExpression) <* optional (semi t)
+                 <*> expr <* optional (semi t)
+    where
+      expr = ExpressionStmt <$> parseExpression
 parser path = Module path <$> (whiteSpace t *> many parseStatement <* eof)
 
 

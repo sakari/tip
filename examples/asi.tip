@@ -1,9 +1,9 @@
 /*
 statement followed by parens is parsed as application
 */
-something
-(argument)
+console.log
+("abc")
 
 // to make the statements separate add a semicolon
-something;
-(parenExpressionStatement)
+1;
+("foo")
