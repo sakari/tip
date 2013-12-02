@@ -1,0 +1,7 @@
+assert = require('assert')
+
+test1() {
+    p = { t : (r) { 1 }}
+    p.t(0)
+}
+assert(test1() == 1, 'calling members')

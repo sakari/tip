@@ -17,7 +17,7 @@ t = makeTokenParser def
                 , opStart = op
                 , opLetter = op
                 , reservedNames = ["return", "if", "else"]
-                , reservedOpNames = ["="]
+                , reservedOpNames = ["=", "<-"]
                 , caseSensitive = True
                 }
           op = oneOf "*/%-+.=<>"
@@ -75,10 +75,12 @@ parseExpression = parseExprLhs `chainl1` parseExprRhs
             index = Index callee <$> parseIndex
             app = Application callee <$> parseApplyList
 
-      parseExprLhs = do
-        t <- parseExprTerminal
-        option t $ do
-          parseApplication t
+      parseAppChain t = do
+        option t $ do
+          k <- parseApplication t
+          parseAppChain k
+
+      parseExprLhs = parseExprTerminal >>= parseAppChain
 
       parseAssign = reservedOp t "=" >> return Assignment
       parseOp = Op <$> operator t
@@ -93,7 +95,10 @@ parseStatement = Statement
                  <$> getPosition
                  <*> stmt <* optional (semi t)
     where
-      stmt = ret <|> conditional <|> expr
+      stmt = ret <|> conditional <|> async <|> expr
+      async = try $ Async
+              <$> commaSep t (identifier t)
+              <*> (reservedOp t "<-" *> parseExpression)
       conditional = IfStmt
                     <$> (reserved t "if" *> parens t parseExpression)
                     <*> statementOrBody
