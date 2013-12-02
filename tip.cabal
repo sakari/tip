@@ -20,11 +20,17 @@ library
   exposed-modules: Language.Tip.Parser
   build-depends:       base ==4.6.*,
                        parsec ==3.1.*,
-                       language-ecmascript ==0.15.*
+                       language-ecmascript ==0.15.*,
+                       syb ==0.4.*,
+                       template-haskell,
+                       utf8-string ==0.3.*
 
 executable tip
   hs-source-dirs:      src
   main-is: Main.hs
   -- other-modules:
   build-depends:       base ==4.6.*, parsec ==3.1.*,
-                       language-ecmascript ==0.15.*
+                       language-ecmascript ==0.15.*,
+                       syb ==0.4.*,
+                       template-haskell,
+                       utf8-string ==0.3.*

@@ -1,6 +1,6 @@
 module Language.Tip.Parser where
 
-import Language.Tip.Ast
+import Language.Tip.Ast hiding (getPosition)
 import Text.Parsec
 import Text.Parsec.ByteString
 import Control.Applicative hiding ((<|>), many, optional)
@@ -17,10 +17,10 @@ t = makeTokenParser def
                 , opStart = op
                 , opLetter = op
                 , reservedNames = ["return", "if", "else"]
-                , reservedOpNames = ["=", "<-"]
+                , reservedOpNames = ["=", "<-", "`"]
                 , caseSensitive = True
                 }
-          op = oneOf "*/%-+.=<>"
+          op = oneOf "*/%-+.=<>`"
 
 parseString = lexeme t $ single <|> double
     where
@@ -56,6 +56,7 @@ parseExpression = parseExprLhs `chainl1` parseExprRhs
       parseNumber = either (IntLiteral . fromIntegral) DoubleLiteral
                     <$> naturalOrFloat t
       parseParens = Parens <$> parens t parseExpression
+      parseQuote = ExprQuote <$> (reservedOp t "`" *> identifier t)
       parseExprTerminal = Expression
                           <$> getPosition
                           <*> (parseFunction
@@ -64,7 +65,8 @@ parseExpression = parseExprLhs `chainl1` parseExprRhs
                                <|> parseNumber
                                <|> parseStringLiteral
                                <|> parseArray
-                               <|> parseObject )
+                               <|> parseObject
+                               <|> parseQuote )
       parseApplyList = parens t $ commaSep t parseExpression
       parseIndex = brackets t $ parseExpression
       parseApplication callee = Expression
@@ -89,7 +91,9 @@ parseExpression = parseExprLhs `chainl1` parseExprRhs
         m <- parseOp <|> parseAssign
         return $ \l r -> Expression pos $ m l r
 
-statementOrBody = braces t (many parseStatement) <|> return `fmap` parseStatement
+statementOrBody = braces t parseStatementList <|> return `fmap` parseStatement
+
+parseStatementList = whiteSpace t *> many parseStatement
 
 parseStatement = Statement
                  <$> getPosition
