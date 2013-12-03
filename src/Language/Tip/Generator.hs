@@ -6,22 +6,7 @@ import qualified Language.ECMAScript3.Syntax as J
 generate :: Module -> [J.Statement ()]
 generate Module { moduleStatements } = map generateStmt moduleStatements
 
-generateBody :: [Statement] -> [J.Statement ()]
-generateBody stmts = go stmts
-    where
-      go [s] = [addReturn s]
-      go (s:ss) = generateStmt s: go ss
-      go [] = []
-      addReturn s@Statement { stmt = ReturnStmt {} } =
-          generateStmt s
-      addReturn s@Statement { stmt = ExpressionStmt { expression }} =
-          J.ReturnStmt () $ Just $ generateExpr expression
-      addReturn s = generateStmt' generateBody s
-
-
-generateStmt stmt = generateStmt' (map generateStmt) stmt
-
-generateStmt' bodyGenerator Statement { stmt } = x stmt
+generateStmt Statement { stmt } = x stmt
     where
       x ExpressionStmt { expression } =
           J.ExprStmt () $ generateExpr expression
@@ -29,8 +14,8 @@ generateStmt' bodyGenerator Statement { stmt } = x stmt
           J.ReturnStmt () $ generateExpr `fmap` returnExpression
       x IfStmt { condition, ifBody, elseBranch } =
           J.IfStmt () (generateExpr condition)
-               (J.BlockStmt () $ bodyGenerator ifBody)
-               (J.BlockStmt () $ bodyGenerator elseBranch)
+               (J.BlockStmt () $ map generateStmt ifBody)
+               (J.BlockStmt () $ map generateStmt elseBranch)
 
 
 generateExpr Expression { expr } = x expr
@@ -38,7 +23,7 @@ generateExpr Expression { expr } = x expr
       x :: Expr -> J.Expression ()
       x Function { functionName, parameters, body } =
           J.FuncExpr () (J.Id () `fmap` functionName) (map (J.Id () . idName) parameters) $
-           generateBody body
+           map generateStmt body
       x Identifier { identifierName } =
           J.VarRef () $ J.Id () identifierName
       x Object { object } = J.ObjectLit () $ map g object

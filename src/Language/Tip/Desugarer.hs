@@ -4,7 +4,24 @@ import Data.Generics
 import Language.Tip.Ast
 import Language.Tip.Quote
 
-desugar ast = asyncTransform ast
+desugar ast = asyncTransform $ explicitReturns ast
+
+explicitReturns ast = everywhere (mkT go) ast
+    where
+      go f@Function { body } = f { body = addReturnForLast body }
+      go a = a
+
+      addReturnForLast b = w $ reverse b
+          where
+            w (s:ss) = reverse $ (addReturn s):ss
+            w [] = []
+
+      addReturn s@Statement { stmt = e@ExpressionStmt { expression } } =
+          s { stmt = ReturnStmt $ Just expression }
+      addReturn s@Statement { stmt = i@IfStmt { ifBody, elseBranch }} =
+          s { stmt = i { ifBody = addReturnForLast ifBody
+                       , elseBranch = addReturnForLast elseBranch  }}
+      addReturn s = s
 
 asyncTransform ast = everywhere (mkT go) ast
     where
