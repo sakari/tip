@@ -16,7 +16,7 @@ t = makeTokenParser def
                 , identLetter = letter <|> digit <|> oneOf "_$"
                 , opStart = op
                 , opLetter = op
-                , reservedNames = ["return", "if", "else"]
+                , reservedNames = ["return", "if", "else", "yield"]
                 , reservedOpNames = ["=", "<-", "`"]
                 , caseSensitive = True
                 }
@@ -39,11 +39,14 @@ parseSymbol = identifier t <|> parseString
 parseIdentifier= Identifier <$> identifier t
 parseStringLiteral = StringLiteral <$> parseString
 
+parseId = (IdQuote <$> (reservedOp t "`" *> identifier t))
+          <|> (Id <$> identifier t)
+
 parseExpression = parseExprLhs `chainl1` parseExprRhs
     where
       parseFunction = try $ Function
              <$> optionMaybe (identifier t)
-             <*> parens t (commaSep t $ identifier t)
+             <*> parens t (commaSep t parseId)
              <*> braces t (many parseStatement)
 
       parseKeyValue = do
@@ -99,14 +102,15 @@ parseStatement = Statement
                  <$> getPosition
                  <*> stmt <* optional (semi t)
     where
-      stmt = ret <|> conditional <|> async <|> expr
+      stmt = ret <|> yield <|> conditional <|> async <|> expr
       async = try $ Async
-              <$> commaSep t (identifier t)
+              <$> commaSep t parseId
               <*> (reservedOp t "<-" *> parseExpression)
       conditional = IfStmt
                     <$> (reserved t "if" *> parens t parseExpression)
                     <*> statementOrBody
                     <*> option [] (reserved t "else" *> statementOrBody)
+      yield = YieldStmt <$> (reserved t "yield" *> commaSep t parseExpression)
       ret = ReturnStmt <$> (reserved t "return" *> optionMaybe parseExpression)
       expr = ExpressionStmt <$> parseExpression
 parser path = Module path <$> (whiteSpace t *> many parseStatement <* eof)

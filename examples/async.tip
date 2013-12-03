@@ -2,10 +2,11 @@ assert = require('assert')
 fs = require('fs')
 
 // <- does a node style async transformation to the function
+
 test1() {
     a <- fs.readFile('Makefile', 'utf8')
     b <- fs.readFile('tip.cabal', 'utf8')
-    a.length + b.length
+    yield a.length + b.length
 }
 
 test1((err, l) {
@@ -15,6 +16,7 @@ test1((err, l) {
 // errors
 test2() {
     p <- fs.readFile('nonexisting', 'utf8')
+    yield p
 }
 
 test2((err) {

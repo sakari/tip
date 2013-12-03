@@ -37,7 +37,7 @@ generateExpr Expression { expr } = x expr
     where
       x :: Expr -> J.Expression ()
       x Function { functionName, parameters, body } =
-          J.FuncExpr () (J.Id () `fmap` functionName) (map (J.Id ()) parameters) $
+          J.FuncExpr () (J.Id () `fmap` functionName) (map (J.Id () . idName) parameters) $
            generateBody body
       x Identifier { identifierName } =
           J.VarRef () $ J.Id () identifierName
@@ -66,6 +66,7 @@ generateExpr Expression { expr } = x expr
                 | op == "*" = J.OpMul
                 | otherwise = error $ "tbd: " ++ show op
       x Assignment { lhs, rhs } = J.AssignExpr () J.OpAssign (generateLvalue lhs) (generateExpr rhs)
+      x ExprQuote { exprQuote } = J.StringLit () exprQuote
 
 generateLvalue Expression { expr } = x expr
     where

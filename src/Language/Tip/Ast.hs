@@ -16,13 +16,17 @@ data Statement = Statement {
     } deriving (Show, Data, Typeable)
 
 data Stmt = ExpressionStmt { expression :: Expression }
-          | Async { resultList :: [String], asyncCall :: Expression }
+          | Async { resultList :: [Id], asyncCall :: Expression }
           | ReturnStmt { returnExpression :: Maybe Expression }
+          | YieldStmt { yield :: [Expression] }
           | IfStmt { condition :: Expression
                    , ifBody :: [Statement]
                    , elseBranch:: [Statement] }
             deriving (Show, Data, Typeable)
 
+data Id = Id { idName :: String }
+        | IdQuote { idQuote :: String }
+          deriving (Show, Data, Typeable)
 
 data Expression = Expression {
       expressionPosition :: SourcePos
@@ -41,7 +45,7 @@ data Expr = Identifier { identifierName :: String }
           | Member { lhs :: Expression, member :: String}
           | Op { op :: String , lhs :: Expression, rhs :: Expression }
           | Assignment { lhs :: Expression, rhs :: Expression }
-          | Function { functionName :: Maybe String, parameters :: [String], body :: [Statement] }
+          | Function { functionName :: Maybe String, parameters :: [Id], body :: [Statement] }
           | ExprQuote { exprQuote :: String }
             deriving (Show, Data, Typeable)
 
@@ -53,3 +57,15 @@ instance Positioned Statement where
 
 instance Positioned Expression where
     getPosition = expressionPosition
+
+class FromExpr e where
+    fromExpr :: Positioned p => p -> Expr -> e
+
+instance FromExpr Expression where
+    fromExpr p e = Expression (getPosition p) e
+
+instance FromExpr Stmt where
+    fromExpr p e = ExpressionStmt $ fromExpr p e
+
+instance FromExpr Statement where
+    fromExpr p e = Statement (getPosition p) $ fromExpr p e

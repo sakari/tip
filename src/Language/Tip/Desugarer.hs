@@ -6,36 +6,30 @@ import Language.Tip.Quote
 
 desugar ast = asyncTransform ast
 
-ifStmt s c t f = Statement { statementPosition = pos
-                           , stmt = IfStmt { condition = c
-                                           , ifBody = t
-                                           , elseBranch = f
-                                           }
-                           }
-    where
-      pos = statementPosition s
-
-returnStmt s e = Statement { statementPosition = pos
-                           , stmt = ReturnStmt $ go `fmap` e
-                           }
-    where
-      go = Expression pos
-      pos = getPosition s
-
-asyncTransform ast = mkT go ast
+asyncTransform ast = everywhere (mkT go) ast
     where
       go :: Expr -> Expr
       go f@Function { parameters, body }
-          | isAsync body = f { parameters = parameters ++ ["@cb"]
+          | isAsync body = f { parameters = parameters ++ [Id "cb"]
                              , body = asyncBody body }
           | otherwise = f
       go x = x
 
-asyncBody (s@Statement { stmt = Async { resultList, asyncCall}}:ss) =
-    asyncToCall s resultList asyncCall ss
+asyncBody ((s@Statement { stmt = Async { resultList, asyncCall}}):ss) =
+    asyncToCall s resultList (expr asyncCall) ss
+asyncBody ((s@Statement { stmt = YieldStmt y }):_) =
+    [tip| return cb(null, `y) |]
 asyncBody (s:ss) = s : asyncBody ss
+asyncBody [] = []
 
-asyncToCall s resultList asyncCall tail = error "tbd"
+asyncToCall s resultList Application { callee, arguments } tail =
+    [tip| `callee (`arguments, (err, `resultList) {
+                     if(err) { return cb(err) }
+                     else { `tail_ }
+                   }) |]
+        where
+          tail_ = asyncBody tail
+asyncToCall _ _ _ _ = error "you should really use a function call on rhs of async arrow"
 
 isAsync body = any go body
     where
