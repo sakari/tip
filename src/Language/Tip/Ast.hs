@@ -15,6 +15,11 @@ data Statement = Statement {
     , stmt :: Stmt
     } deriving (Show, Data, Typeable)
 
+data Property = Property { propertyPosition :: SourcePos
+                         , propertyName :: Id
+                         , propertyExpr :: Expression }
+              deriving (Show, Data, Typeable)
+
 data Stmt = ExpressionStmt { expression :: Expression }
           | Async { resultList :: [Id], asyncCall :: Expression }
           | ReturnStmt { returnExpression :: Maybe Expression }
@@ -26,7 +31,7 @@ data Stmt = ExpressionStmt { expression :: Expression }
 
 data Id = Id { idName :: String }
         | IdQuote { idQuote :: String }
-          deriving (Show, Data, Typeable)
+          deriving (Show, Data, Typeable, Eq)
 
 data Expression = Expression {
       expressionPosition :: SourcePos
@@ -47,6 +52,9 @@ data Expr = Identifier { identifierName :: String }
           | Assignment { lhs :: Expression, rhs :: Expression }
           | Function { functionName :: Maybe String, parameters :: [Id], body :: [Statement] }
           | ExprQuote { exprQuote :: String }
+          | New { newClass :: Expression }
+          | Class { className :: Id
+                  , properties :: [Property]}
             deriving (Show, Data, Typeable)
 
 class Positioned p where

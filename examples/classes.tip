@@ -1,0 +1,36 @@
+assert = require('assert')
+
+test1() {
+    Classy = class Classy {
+	constructor = () {
+	    this.i = 1
+	}
+    }
+    new Classy()
+}
+assert(test1().i == 1, 'instance construction')
+
+test2() {
+    class Classy {
+	constructor = () {
+	    this.i = 1
+	}
+    }
+}
+assert((new test2()()).i == 1, 'classes can be returned')
+
+test3() {
+    Classy = class Classy {
+	method = () { 1 }
+    }
+    new Classy()
+}
+assert(test3().method() == 1, 'class method')
+
+test4() {
+    Classy = class C {
+	prop = 1
+    }
+    new Classy()
+}
+assert(test4().prop == 1, 'class property')

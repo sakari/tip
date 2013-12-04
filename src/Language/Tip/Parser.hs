@@ -16,7 +16,7 @@ t = makeTokenParser def
                 , identLetter = letter <|> digit <|> oneOf "_$"
                 , opStart = op
                 , opLetter = op
-                , reservedNames = ["return", "if", "else", "yield"]
+                , reservedNames = ["return", "if", "else", "yield", "class", "new"]
                 , reservedOpNames = ["=", "<-", "`"]
                 , caseSensitive = True
                 }
@@ -60,9 +60,16 @@ parseExpression = parseExprLhs `chainl1` parseExprRhs
                     <$> naturalOrFloat t
       parseParens = Parens <$> parens t parseExpression
       parseQuote = ExprQuote <$> (reservedOp t "`" *> identifier t)
+      parseNew = New <$> (reserved t "new" *> parseExpression)
+      parseClass = Class
+                   <$> (reserved t "class" *> parseId )
+                   <*> braces t (many $ parseProperty)
+
       parseExprTerminal = Expression
                           <$> getPosition
                           <*> (parseFunction
+                               <|> parseClass
+                               <|> parseNew
                                <|> parseIdentifier
                                <|> parseParens
                                <|> parseNumber
@@ -97,6 +104,11 @@ parseExpression = parseExprLhs `chainl1` parseExprRhs
 statementOrBody = braces t parseStatementList <|> return `fmap` parseStatement
 
 parseStatementList = whiteSpace t *> many parseStatement
+
+parseProperty = Property
+                <$> getPosition
+                <*> parseId
+                <*> (reservedOp t "=" *> parseExpression <* optional (semi t))
 
 parseStatement = Statement
                  <$> getPosition
