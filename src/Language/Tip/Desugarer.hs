@@ -27,7 +27,7 @@ asyncTransform ast = everywhere (mkT go) ast
     where
       go :: Expr -> Expr
       go f@Function { parameters, body }
-          | isAsync body = f { parameters = parameters ++ [Id "cb"]
+          | isAsync body = f { parameters = parameters ++ [Id "__cb__"]
                              , body = asyncBody body }
           | otherwise = f
       go x = x
@@ -35,13 +35,13 @@ asyncTransform ast = everywhere (mkT go) ast
 asyncBody ((s@Statement { stmt = Async { resultList, asyncCall}}):ss) =
     asyncToCall s resultList (expr asyncCall) ss
 asyncBody ((s@Statement { stmt = YieldStmt y }):_) =
-    [tip| return cb(null, `y) |]
+    [tip| return __cb__(null, `y) |]
 asyncBody (s:ss) = s : asyncBody ss
 asyncBody [] = []
 
 asyncToCall s resultList Application { callee, arguments } tail =
     [tip| `callee (`arguments, (err, `resultList) {
-                     if(err) { return cb(err) }
+                     if(err) { return __cb__(err) }
                      else { `tail_ }
                    }) |]
         where
