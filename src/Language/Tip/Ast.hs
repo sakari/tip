@@ -95,12 +95,6 @@ instance ToId Id where
 instance ToId String where
     toId = Id
 
-
-
-
-
-
-
 class Positioned p where
     getPosition :: p -> SourcePos
 
@@ -109,15 +103,3 @@ instance Positioned Statement where
 
 instance Positioned Expression where
     getPosition = expressionPosition
-
-class FromExpr e where
-    fromExpr :: Positioned p => p -> Expr -> e
-
-instance FromExpr Expression where
-    fromExpr p e = Expression (getPosition p) e
-
-instance FromExpr Stmt where
-    fromExpr p e = ExpressionStmt $ fromExpr p e
-
-instance FromExpr Statement where
-    fromExpr p e = Statement (getPosition p) $ fromExpr p e
