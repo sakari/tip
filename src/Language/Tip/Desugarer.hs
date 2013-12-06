@@ -1,11 +1,46 @@
 {-# LANGUAGE NamedFieldPuns, QuasiQuotes, RankNTypes #-}
 module Language.Tip.Desugarer (desugar, freeVars, explicitVars ) where
 import Data.Generics
+import Data.List (find)
 import Language.Tip.Ast
 import Language.Tip.Quote
 import qualified Data.Set as Set
 
-desugar ast = asyncTransform $ explicitVars $ explicitReturns ast
+desugar ast = classToFunc $ asyncTransform $ explicitVars $ explicitReturns ast
+
+classToFunc ast = mkT go `everywhere` ast
+    where
+      go Expression { expr = Class { className, properties }} =
+          [tipE| (() { __init() { `initBody }; `c; `methods; return `className })() |]
+              where
+                c = [tip| `className (`constrParams) { __init.apply(this); `constrBody } |]
+                methods = concatMap w properties
+                    where
+                      w Property { propertyExpr = e@Expression { expr = Function {}}
+                                 , propertyName }
+                          | propertyName == Id "constructor" = []
+                          | otherwise = [tip| `className.prototype.`propertyName = `e |]
+                      w p = []
+
+                initBody = concatMap w properties
+                    where
+                      w Property { propertyExpr = Expression { expr = Function {}}} = []
+                      w Property { propertyName, propertyExpr } =
+                          [tip| this.`propertyName = `propertyExpr |]
+                constrParams = maybe [] parameters constructor
+                constrBody = maybe [] body constructor
+                constructor = do
+                  c <- find w properties
+                  case c of
+                    Property { propertyExpr =
+                                   Expression
+                                   { expr = f@Function {}}} -> return f
+                    _ -> error $ "you should really consider giving a function literal for class constructor of: " ++ show className
+
+                w Property { propertyName }
+                    | propertyName == Id "constructor" = True
+                    | otherwise = False
+      go a = a
 
 freeVars ast = varUses `Set.difference` varDecls
     where
@@ -20,7 +55,7 @@ freeVars ast = varUses `Set.difference` varDecls
       varDecls = (everythingBut Set.union $ mkQ (Set.empty, False) vars `extQ` notFun ) ast
       notFun Function { functionName } = case functionName of
                                            Nothing -> (Set.empty, True)
-                                           Just n -> (Set.singleton n, True)
+                                           Just n -> (Set.singleton $ idName n, True)
       notFun _ = (Set.empty, False)
       vars VarStmt { varId } = ( Set.singleton $ idToString varId, False)
       vars _ = (Set.empty, False)

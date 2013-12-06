@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, NamedFieldPuns, TypeSynonymInstances, FlexibleInstances #-}
 module Language.Tip.Ast where
 
 import Data.Typeable
@@ -48,16 +48,58 @@ data Expr = Identifier { identifierName :: String }
           | StringLiteral { stringLiteral :: String }
           | Application { callee :: Expression, arguments :: [Expression]}
           | Index { callee :: Expression, index :: Expression }
-          | Member { lhs :: Expression, member :: String}
+          | Member { lhs :: Expression, member :: Id}
           | Op { op :: String , lhs :: Expression, rhs :: Expression }
           | Assignment { lhs :: Expression, rhs :: Expression }
-          | Function { functionName :: Maybe String, parameters :: [Id], body :: [Statement] }
+          | Function { functionName :: Maybe Id, parameters :: [Id], body :: [Statement] }
           | ExprQuote { exprQuote :: String }
           | New { newClass :: Expression }
           | Class { className :: Id
                   , properties :: [Property]}
           | Not { notExpression :: Expression }
             deriving (Show, Data, Typeable)
+
+class ToExpression a where
+    toExpression :: a -> Expression
+
+instance ToExpression String where
+    toExpression = toExpression . toId
+
+instance ToExpression Id where
+    toExpression Id { idName } = Expression { expr = Identifier idName }
+
+instance ToExpression Expression where
+    toExpression = id
+
+class ToStatement a where
+    toStatement :: a -> Statement
+
+instance ToStatement String where
+    toStatement = toStatement . toExpression
+
+instance ToStatement Id where
+    toStatement = toStatement . toExpression
+
+instance ToStatement Expression where
+    toStatement a = Statement { stmt = ExpressionStmt { expression = a}}
+
+instance ToStatement Statement where
+    toStatement = id
+
+class ToId a where
+    toId :: a -> Id
+
+instance ToId Id where
+    toId = id
+
+instance ToId String where
+    toId = Id
+
+
+
+
+
+
 
 class Positioned p where
     getPosition :: p -> SourcePos

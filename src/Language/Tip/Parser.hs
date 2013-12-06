@@ -43,10 +43,10 @@ parseStringLiteral = StringLiteral <$> parseString
 parseId = (IdQuote <$> (reservedOp t "`" *> identifier t))
           <|> (Id <$> identifier t)
 
-parseExpression = parseExprLhs `chainl1` parseExprRhs
+parseExpression = whiteSpace t *> (parseExprLhs `chainl1` parseExprRhs)
     where
       parseFunction = try $ Function
-             <$> optionMaybe (identifier t)
+             <$> optionMaybe parseId
              <*> parens t (commaSep t parseId)
              <*> braces t (many parseStatement)
 
@@ -85,7 +85,7 @@ parseExpression = parseExprLhs `chainl1` parseExprRhs
                                 <$> getPosition
                                 <*> (app <|> index <|> member)
           where
-            member = Member callee <$> (dot t *> identifier t)
+            member = Member callee <$> (dot t *> parseId)
             index = Index callee <$> parseIndex
             app = Application callee <$> parseApplyList
 
