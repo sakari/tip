@@ -18,6 +18,8 @@ generateStmt Statement { stmt } = x stmt
           J.IfStmt () (generateExpr condition)
                (J.BlockStmt () $ map generateStmt ifBody)
                (J.BlockStmt () $ map generateStmt elseBranch)
+      x VarStmt { varId, varAssignment } =
+          J.VarDeclStmt () [J.VarDecl () (J.Id () $ idName varId) $ fmap generateExpr varAssignment]
 
 generateExpr Expression { expr } = x expr
     where
@@ -38,6 +40,7 @@ generateExpr Expression { expr } = x expr
                                            map generateExpr arguments
       x Index { callee, index} = J.BracketRef () (generateExpr callee) (generateExpr index)
       x Member { lhs, member} = J.DotRef () (generateExpr lhs) (J.Id () member)
+      x Not { notExpression } = J.PrefixExpr () J.PrefixLNot $ generateExpr notExpression
       x Op { op, lhs, rhs } = J.InfixExpr () iop (generateExpr lhs) (generateExpr rhs)
           where
             iop | op == "<" = J.OpLT

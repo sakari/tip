@@ -19,3 +19,24 @@ test2() {
     b
 }
 assert(test2() ==1, 'variables are hoisted to the outermost scope')
+
+test4() {
+    a = 1
+    fun() {
+	var a
+	a = 2
+    }
+    fun()
+    a
+}
+assert(test4() == 1, 'variable scope can be set with `var`')
+
+test3() {
+    fun() {
+	if(!b) { b = 1 }
+	else { b = (b + 1) }
+    }
+    fun()
+    fun()
+}
+assert(test3() == 1, 'variables are not shared between function calls')

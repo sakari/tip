@@ -16,8 +16,9 @@ t = makeTokenParser def
                 , identLetter = letter <|> digit <|> oneOf "_$"
                 , opStart = op
                 , opLetter = op
-                , reservedNames = ["return", "if", "else", "yield", "class", "new"]
-                , reservedOpNames = ["=", "<-", "`"]
+                , reservedNames = ["var",    "return", "if", "else"
+                                  , "yield", "class",  "new"]
+                , reservedOpNames = ["=", "<-", "`", "!"]
                 , caseSensitive = True
                 }
           op = oneOf "*/%-+.=<>`"
@@ -64,10 +65,11 @@ parseExpression = parseExprLhs `chainl1` parseExprRhs
       parseClass = Class
                    <$> (reserved t "class" *> parseId )
                    <*> braces t (many $ parseProperty)
-
+      parseNot = Not <$> (reservedOp t "!" *> parseExpression )
       parseExprTerminal = Expression
                           <$> getPosition
-                          <*> (parseFunction
+                          <*> (parseNot
+                               <|> parseFunction
                                <|> parseClass
                                <|> parseNew
                                <|> parseIdentifier
@@ -114,7 +116,10 @@ parseStatement = Statement
                  <$> getPosition
                  <*> stmt <* optional (semi t)
     where
-      stmt = ret <|> yield <|> conditional <|> async <|> expr
+      stmt = ret <|> yield <|> var <|> conditional <|> async <|> expr
+      var = VarStmt
+            <$> (reserved t "var" *> parseId)
+            <*> optionMaybe (reservedOp t "=" *> parseExpression)
       async = try $ Async
               <$> commaSep t parseId
               <*> (reservedOp t "<-" *> parseExpression)

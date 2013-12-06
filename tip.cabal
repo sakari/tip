@@ -23,7 +23,8 @@ library
                        language-ecmascript ==0.15.*,
                        syb ==0.4.*,
                        template-haskell,
-                       utf8-string ==0.3.*
+                       utf8-string ==0.3.*,
+                       containers ==0.5.0.*
 
 executable tip
   hs-source-dirs:      src
@@ -33,4 +34,5 @@ executable tip
                        language-ecmascript ==0.15.*,
                        syb ==0.4.*,
                        template-haskell,
-                       utf8-string ==0.3.*
+                       utf8-string ==0.3.*,
+                       containers ==0.5.0.*

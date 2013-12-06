@@ -22,3 +22,29 @@ test2() {
 test2((err) {
     assert(err, 'error is forwarded')
 })
+
+test3() {
+    p <- fs.readFile('Makefile')
+    var k = 1
+    r = 2
+    p <- fs.readFile('Makefile')
+    yield k, r
+}
+test3((err, k, r) {
+    assert(k == 1, 'vars are visible over async arrows')
+    assert(r == 2, 'as are non var variables')
+})
+
+test4(done) {
+    a(cb) {
+	process.nextTick(() {
+	    done(p) //this should have the result from the lhs of the async arrow
+	})
+	cb(null, 'finished')
+    }
+    p <- a()
+    yield
+}
+test4((r) {
+    assert(r == 'finished', 'async arrow sets variable in function scope')
+}, () {})

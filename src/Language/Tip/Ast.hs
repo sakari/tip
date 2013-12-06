@@ -27,6 +27,7 @@ data Stmt = ExpressionStmt { expression :: Expression }
           | IfStmt { condition :: Expression
                    , ifBody :: [Statement]
                    , elseBranch:: [Statement] }
+          | VarStmt { varId :: Id, varAssignment :: Maybe Expression }
             deriving (Show, Data, Typeable)
 
 data Id = Id { idName :: String }
@@ -55,6 +56,7 @@ data Expr = Identifier { identifierName :: String }
           | New { newClass :: Expression }
           | Class { className :: Id
                   , properties :: [Property]}
+          | Not { notExpression :: Expression }
             deriving (Show, Data, Typeable)
 
 class Positioned p where
