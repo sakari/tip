@@ -4,8 +4,18 @@ test1() {
     a : number
     var k : number
     a = 1 : number
+    s : string
     p : boolean
     f(k: number): number {
     }
     r : 'constant'
+    o : {
+	a: number,
+	b: boolean
+    }
+    arr : [number]
+    lambdaWithoutReturn : (number)
+    lambdaWithReturn : (number) -> number
+    w : o // type of o
+
 }

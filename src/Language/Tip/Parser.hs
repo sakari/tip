@@ -19,7 +19,7 @@ t = makeTokenParser def
                 , opLetter = op
                 , reservedNames = ["var",    "return", "if", "else"
                                   , "yield", "class",  "new"]
-                , reservedOpNames = ":":(concatMap (map fst) exprTable)
+                , reservedOpNames = ":" : "->" : (concatMap (map fst) exprTable)
                 , caseSensitive = True
                 }
           op = oneOf "*/%-+.=<>`"
@@ -106,8 +106,20 @@ parseExpression = whiteSpace t *> go
 
 parseTypeAssignment = optionMaybe ( reservedOp t ":" *> parseType)
 
-parseType = boolean <|> number <|> constant
+parseType = stringtype <|> boolean <|> number <|> constant <|> struct <|> array <|> fun <|> iface
     where
+      stringtype = lexeme t (string "string") >> return StringType
+      iface = Interface <$> parseId
+      fun = FunType
+            <$> (parens t $ commaSep t parseType)
+            <*> (optionMaybe $ (reservedOp t "->" *> parseType))
+      array = ArrayType <$> (brackets t $ parseType)
+      structField = do
+        k <- parseId
+        reservedOp t ":"
+        v <- parseType
+        return $ (k, v)
+      struct = StructType <$> (braces t $ commaSep t $ structField)
       constant = ConstantType <$> parseString
       boolean = lexeme t (string "boolean") >> return BoolType
       number = lexeme t (string "number") >> return NumberType

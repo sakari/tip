@@ -76,7 +76,12 @@ data Expr = Identifier { identifierName :: String }
 
 data Type = NumberType
           | BoolType
+          | StringType
           | ConstantType { constant :: String }
+          | StructType { structFields :: [(Id, Type)] }
+          | ArrayType { elementType :: Type }
+          | FunType { parameterTypes :: [Type], funReturnType :: Maybe Type }
+          | Interface { interfaceName :: Id }
             deriving (Show, Data, Typeable)
 
 class ToExpression a where
