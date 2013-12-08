@@ -1,0 +1,25 @@
+assert = require('assert')
+
+assert(1 - 1 * 2 == -1, 'mul')
+assert(1 <= 2, 'leq')
+assert(1 < 2, 'le')
+assert(2 >= 1, 'grq')
+assert(2 > 1, 'gr')
+assert(1 == 1, 'eq')
+
+a = 1
+assert(a += 2 == 3, 'plus assign')
+a = 1
+assert(a -= 2 == -1, 'minus assign')
+
+a = 0
+assert(++a == 1, 'preincr')
+
+a = 0
+assert(--a == -1, 'predecr')
+
+a = 0
+assert(a-- == 0, 'postdecr')
+
+a = 0
+assert(a++ == 0, 'postincr')

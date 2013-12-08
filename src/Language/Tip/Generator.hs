@@ -40,7 +40,9 @@ generateExpr Expression { expr } = x expr
                                            map generateExpr arguments
       x Index { callee, index} = J.BracketRef () (generateExpr callee) (generateExpr index)
       x Member { lhs, member} = J.DotRef () (generateExpr lhs) (J.Id () $ idName member)
-      x Not { notExpression } = J.PrefixExpr () J.PrefixLNot $ generateExpr notExpression
+      x Not { opExpr } = prefix J.PrefixLNot opExpr
+      x Negate { opExpr } = prefix J.PrefixMinus opExpr
+      x Plus { opExpr } = prefix J.PrefixPlus opExpr
       x Op { op, lhs, rhs } = J.InfixExpr () iop (generateExpr lhs) (generateExpr rhs)
           where
             iop | op == "<" = J.OpLT
@@ -54,11 +56,32 @@ generateExpr Expression { expr } = x expr
                 | op == "-" = J.OpSub
                 | op == "*" = J.OpMul
                 | otherwise = error $ "tbd: " ++ show op
-      x Assignment { lhs, rhs } = J.AssignExpr () J.OpAssign (generateLvalue lhs) (generateExpr rhs)
+      x Assignment { op, lhs, rhs } = assign op lhs rhs
       x ExprQuote { exprQuote } = J.StringLit () exprQuote
       x New { newClass = Expression { expr = Application { callee, arguments }}} =
           J.NewExpr () (generateExpr callee ) $ map generateExpr arguments
+      x PostIncrement { opExpr } = unaryAssign J.PostfixInc opExpr
+      x PostDecrement { opExpr } = unaryAssign J.PostfixDec opExpr
+      x PreIncrement { opExpr } = unaryAssign J.PrefixInc opExpr
+      x PreDecrement { opExpr } = unaryAssign J.PrefixDec opExpr
       x e = error $ "missing expression case: " ++ show e
+
+unaryAssign o e = J.UnaryAssignExpr () o (generateLvalue e)
+
+prefix c e = J.PrefixExpr () c $ generateExpr e
+assign o lhs rhs = J.AssignExpr () op (generateLvalue lhs) (generateExpr rhs)
+    where
+      op = case o of
+             "=" -> J.OpAssign
+             "+=" -> J.OpAssignAdd
+             "-=" -> J.OpAssignSub
+             "*=" -> J.OpAssignMul
+             "/=" -> J.OpAssignDiv
+             "%=" -> J.OpAssignMod
+             "^=" -> J.OpAssignBXor
+             "&=" -> J.OpAssignBAnd
+             "|=" -> J.OpAssignBOr
+             _ -> error $ "unknown assign op: " ++ o
 
 generateLvalue Expression { expr } = x expr
     where

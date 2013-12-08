@@ -50,13 +50,19 @@ data Expr = Identifier { identifierName :: String }
           | Index { callee :: Expression, index :: Expression }
           | Member { lhs :: Expression, member :: Id}
           | Op { op :: String , lhs :: Expression, rhs :: Expression }
-          | Assignment { lhs :: Expression, rhs :: Expression }
+          | Assignment { op :: String, lhs :: Expression, rhs :: Expression }
           | Function { functionName :: Maybe Id, parameters :: [Id], body :: [Statement] }
           | ExprQuote { exprQuote :: String }
           | New { newClass :: Expression }
           | Class { className :: Id
                   , properties :: [Property]}
-          | Not { notExpression :: Expression }
+          | Not { opExpr :: Expression }
+          | Negate { opExpr :: Expression }
+          | Plus { opExpr :: Expression }
+          | PreIncrement { opExpr :: Expression }
+          | PreDecrement { opExpr :: Expression }
+          | PostIncrement { opExpr :: Expression }
+          | PostDecrement { opExpr :: Expression }
             deriving (Show, Data, Typeable)
 
 class ToExpression a where

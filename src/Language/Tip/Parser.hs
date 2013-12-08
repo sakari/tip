@@ -2,6 +2,7 @@ module Language.Tip.Parser where
 
 import Language.Tip.Ast hiding (getPosition)
 import Text.Parsec
+import Text.Parsec.Expr
 import Text.Parsec.ByteString
 import Control.Applicative hiding ((<|>), many, optional)
 import Text.Parsec.Token
@@ -18,7 +19,7 @@ t = makeTokenParser def
                 , opLetter = op
                 , reservedNames = ["var",    "return", "if", "else"
                                   , "yield", "class",  "new"]
-                , reservedOpNames = ["=", "<-", "`", "!"]
+                , reservedOpNames = concatMap (map fst) exprTable
                 , caseSensitive = True
                 }
           op = oneOf "*/%-+.=<>`"
@@ -43,8 +44,10 @@ parseStringLiteral = StringLiteral <$> parseString
 parseId = (IdQuote <$> (reservedOp t "`" *> identifier t))
           <|> (Id <$> identifier t)
 
-parseExpression = whiteSpace t *> (parseExprLhs `chainl1` parseExprRhs)
+parseExpression = whiteSpace t *> go
     where
+      go = buildExpressionParser exprTable' $ parseExprTerminal >>= parseAppChain
+      exprTable' = map (map snd) exprTable
       parseFunction = try $ Function
              <$> optionMaybe parseId
              <*> parens t (commaSep t parseId)
@@ -94,14 +97,46 @@ parseExpression = whiteSpace t *> (parseExprLhs `chainl1` parseExprRhs)
           k <- parseApplication t
           parseAppChain k
 
-      parseExprLhs = parseExprTerminal >>= parseAppChain
+exprTable = [ [ prefix "++" PreIncrement
+              , prefix "--" PreDecrement
+              , postfix "++" PostIncrement
+              , postfix "--" PostDecrement]
+            , [prefix "!" Not
+              , prefix "-" Negate
+              , prefix "+" Plus ]
+            , binops ["/", "*", "%"]
+            , binops ["+", "-"]
+            , binops ["<<", ">>", ">>>"]
+            , binops ["<", "<=", ">=", ">"]
+            , binops ["==", "!="]
+            , binops ["&"]
+            , binops ["^"]
+            , binops ["|"]
+            , binops ["&&"]
+            , binops ["||"]
+            , assignments ["="
+                          , "+=", "-=", "*=", "/=", "%="
+                          , "<<=", ">>=", "<<<="
+                          , "&=", "^=", "|="]
+            ]
 
-      parseAssign = reservedOp t "=" >> return Assignment
-      parseOp = Op <$> operator t
-      parseExprRhs = do
-        pos <- getPosition
-        m <- parseOp <|> parseAssign
-        return $ \l r -> Expression pos $ m l r
+assignments names = map (binary Assignment AssocRight) names
+binops names = map (binary Op AssocLeft) names
+
+binary c assoc name =
+    (name, flip Infix assoc $ do
+       p <- getPosition
+       reservedOp t name
+       return $ \l r -> Expression p $ c name l r)
+
+unary name fun c =
+    (name, c $ do
+       p <- getPosition
+       reservedOp t name
+       return $ \e -> Expression p $ fun e)
+
+prefix name fun = unary name fun Prefix
+postfix name fun = unary name fun Postfix
 
 statementOrBody = braces t parseStatementList <|> return `fmap` parseStatement
 
