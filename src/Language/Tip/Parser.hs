@@ -19,7 +19,7 @@ t = makeTokenParser def
                 , opLetter = op
                 , reservedNames = ["var",    "return", "if", "else"
                                   , "yield", "class",  "new"]
-                , reservedOpNames = concatMap (map fst) exprTable
+                , reservedOpNames = ":":(concatMap (map fst) exprTable)
                 , caseSensitive = True
                 }
           op = oneOf "*/%-+.=<>`"
@@ -44,13 +44,18 @@ parseStringLiteral = StringLiteral <$> parseString
 parseId = (IdQuote <$> (reservedOp t "`" *> identifier t))
           <|> (Id <$> identifier t)
 
+parseParameter = Parameter
+                 <$> parseId
+                 <*> parseTypeAssignment
+
 parseExpression = whiteSpace t *> go
     where
       go = buildExpressionParser exprTable' $ parseExprTerminal >>= parseAppChain
       exprTable' = map (map snd) exprTable
       parseFunction = try $ Function
              <$> optionMaybe parseId
-             <*> parens t (commaSep t parseId)
+             <*> parens t (commaSep t parseParameter)
+             <*> parseTypeAssignment
              <*> braces t (many parseStatement)
 
       parseKeyValue = do
@@ -82,11 +87,13 @@ parseExpression = whiteSpace t *> go
                                <|> parseArray
                                <|> parseObject
                                <|> parseQuote )
+                          <*> parseTypeAssignment
       parseApplyList = parens t $ commaSep t parseExpression
       parseIndex = brackets t $ parseExpression
       parseApplication callee = Expression
                                 <$> getPosition
                                 <*> (app <|> index <|> member)
+                                <*> parseTypeAssignment
           where
             member = Member callee <$> (dot t *> parseId)
             index = Index callee <$> parseIndex
@@ -96,6 +103,14 @@ parseExpression = whiteSpace t *> go
         option t $ do
           k <- parseApplication t
           parseAppChain k
+
+parseTypeAssignment = optionMaybe ( reservedOp t ":" *> parseType)
+
+parseType = boolean <|> number <|> constant
+    where
+      constant = ConstantType <$> parseString
+      boolean = lexeme t (string "boolean") >> return BoolType
+      number = lexeme t (string "number") >> return NumberType
 
 exprTable = [ [ prefix "++" PreIncrement
               , prefix "--" PreDecrement
@@ -127,13 +142,15 @@ binary c assoc name =
     (name, flip Infix assoc $ do
        p <- getPosition
        reservedOp t name
-       return $ \l r -> Expression p $ c name l r)
+       ty <- parseTypeAssignment
+       return $ \l r -> Expression p (c name l r) ty)
 
 unary name fun c =
     (name, c $ do
        p <- getPosition
        reservedOp t name
-       return $ \e -> Expression p $ fun e)
+       ty <- parseTypeAssignment
+       return $ \e -> Expression p (fun e) ty)
 
 prefix name fun = unary name fun Prefix
 postfix name fun = unary name fun Postfix
@@ -154,9 +171,10 @@ parseStatement = Statement
       stmt = ret <|> yield <|> var <|> conditional <|> async <|> expr
       var = VarStmt
             <$> (reserved t "var" *> parseId)
+            <*> parseTypeAssignment
             <*> optionMaybe (reservedOp t "=" *> parseExpression)
       async = try $ Async
-              <$> commaSep t parseId
+              <$> commaSep t parseParameter
               <*> (reservedOp t "<-" *> parseExpression)
       conditional = IfStmt
                     <$> (reserved t "if" *> parens t parseExpression)

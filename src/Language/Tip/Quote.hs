@@ -28,15 +28,15 @@ mkList p = TH.UInfixE p (TH.ConE $ TH.mkName ":") (TH.ConE $ TH.mkName "[]")
 cat l r = TH.UInfixE l (TH.VarE $ TH.mkName "++") r
 
 antiQuote :: (forall b. Data b => b -> Maybe (TH.Q TH.Exp))
-antiQuote k = mkQ Nothing qexpr `extQ` qexprList `extQ` qstmtList `extQ` qidList `extQ` qid `extQ` qstmt $  k
+antiQuote k = mkQ Nothing qexpr `extQ` qexprList `extQ` qstmtList `extQ` qparamList `extQ` qid `extQ` qstmt $  k
     where
       qid IdQuote { idQuote } = Just $ return $ liftId `TH.AppE` var idQuote
       qid i = Nothing
 
-      qidList :: [Id] -> Maybe (TH.Q TH.Exp)
-      qidList = splice liftId w
+      qparamList :: [Parameter] -> Maybe (TH.Q TH.Exp)
+      qparamList = splice liftParameter w
           where
-            w IdQuote { idQuote } = Just idQuote
+            w Parameter { parameterId = IdQuote { idQuote }} = Just idQuote
             w _ = Nothing
 
       qstmt Statement { stmt = ExpressionStmt { expression = Expression { expr = ExprQuote { exprQuote }}}} =
@@ -62,6 +62,8 @@ antiQuote k = mkQ Nothing qexpr `extQ` qexprList `extQ` qstmtList `extQ` qidList
 
 var :: String -> TH.Exp
 var = TH.VarE . TH.mkName
+
+liftParameter = TH.VarE $ TH.mkName "toParameter"
 
 liftId = TH.VarE $ TH.mkName "toId"
 

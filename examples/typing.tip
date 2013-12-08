@@ -1,0 +1,11 @@
+assert = require('assert')
+
+test1() {
+    a : number
+    var k : number
+    a = 1 : number
+    p : boolean
+    f(k: number): number {
+    }
+    r : 'constant'
+}

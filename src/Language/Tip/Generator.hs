@@ -25,7 +25,7 @@ generateExpr Expression { expr } = x expr
     where
       x :: Expr -> J.Expression ()
       x Function { functionName, parameters, body } =
-          J.FuncExpr () ((J.Id () . idName) `fmap` functionName) (map (J.Id () . idName) parameters) $
+          J.FuncExpr () ((J.Id () . idName) `fmap` functionName) (map (J.Id () . idName . parameterId) parameters) $
            map generateStmt body
       x Identifier { identifierName } =
           J.VarRef () $ J.Id () identifierName

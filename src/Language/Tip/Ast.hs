@@ -21,22 +21,28 @@ data Property = Property { propertyPosition :: SourcePos
               deriving (Show, Data, Typeable)
 
 data Stmt = ExpressionStmt { expression :: Expression }
-          | Async { resultList :: [Id], asyncCall :: Expression }
+          | Async { resultList :: [Parameter], asyncCall :: Expression }
           | ReturnStmt { returnExpression :: Maybe Expression }
           | YieldStmt { yield :: [Expression] }
           | IfStmt { condition :: Expression
                    , ifBody :: [Statement]
                    , elseBranch:: [Statement] }
-          | VarStmt { varId :: Id, varAssignment :: Maybe Expression }
+          | VarStmt { varId :: Id, varType :: Maybe Type, varAssignment :: Maybe Expression }
             deriving (Show, Data, Typeable)
 
 data Id = Id { idName :: String }
         | IdQuote { idQuote :: String }
           deriving (Show, Data, Typeable, Eq)
 
+data Parameter = Parameter {
+      parameterId :: Id
+    , parameterType :: Maybe Type
+    } deriving (Show, Data, Typeable)
+
 data Expression = Expression {
       expressionPosition :: SourcePos
     , expr :: Expr
+    , exprType :: Maybe Type
     } deriving (Show, Data, Typeable)
 
 data Expr = Identifier { identifierName :: String }
@@ -51,7 +57,10 @@ data Expr = Identifier { identifierName :: String }
           | Member { lhs :: Expression, member :: Id}
           | Op { op :: String , lhs :: Expression, rhs :: Expression }
           | Assignment { op :: String, lhs :: Expression, rhs :: Expression }
-          | Function { functionName :: Maybe Id, parameters :: [Id], body :: [Statement] }
+          | Function { functionName :: Maybe Id
+                     , parameters :: [Parameter]
+                     , returnType :: Maybe Type
+                     , body :: [Statement] }
           | ExprQuote { exprQuote :: String }
           | New { newClass :: Expression }
           | Class { className :: Id
@@ -63,6 +72,11 @@ data Expr = Identifier { identifierName :: String }
           | PreDecrement { opExpr :: Expression }
           | PostIncrement { opExpr :: Expression }
           | PostDecrement { opExpr :: Expression }
+            deriving (Show, Data, Typeable)
+
+data Type = NumberType
+          | BoolType
+          | ConstantType { constant :: String }
             deriving (Show, Data, Typeable)
 
 class ToExpression a where
@@ -91,6 +105,18 @@ instance ToStatement Expression where
 
 instance ToStatement Statement where
     toStatement = id
+
+class ToParameter a where
+    toParameter :: a -> Parameter
+
+instance ToParameter String where
+    toParameter a = Parameter (toId a) Nothing
+
+instance ToParameter Parameter where
+    toParameter = id
+
+instance ToParameter Id where
+    toParameter a = Parameter a Nothing
 
 class ToId a where
     toId :: a -> Id

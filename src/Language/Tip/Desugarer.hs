@@ -49,7 +49,7 @@ freeVars ast = varUses `Set.difference` varDecls
       ident Identifier { identifierName } = (Set.singleton identifierName, False)
       ident _ = (Set.empty, False)
 
-      async Async { resultList } = (Set.fromList $ map idToString resultList, False)
+      async Async { resultList } = (Set.fromList $ map (idName . parameterId) resultList, False)
       async _ = (Set.empty, False)
 
       varDecls = (everythingBut Set.union $ mkQ (Set.empty, False) vars `extQ` notFun ) ast
@@ -73,7 +73,7 @@ explicitVars m@Module { moduleStatements } = m { moduleStatements = go globals m
                        $ map Id $ Set.toList boundInBody
             stmts' = everywhereBut' (mkQ False isFun) (mkT w) stmts
             w f@Function { parameters, body } =
-                f { body = go (Set.union free' $ Set.fromList $ map idToString parameters) body }
+                f { body = go (Set.union free' $ Set.fromList $ map (idName . parameterId) parameters) body }
             w e = e
             isFun Function {} = True
             isFun _ = False
@@ -108,7 +108,7 @@ asyncTransform ast = everywhere (mkT go) ast
     where
       go :: Expr -> Expr
       go f@Function { parameters, body }
-          | isAsync body = f { parameters = parameters ++ [Id "__cb__"]
+          | isAsync body = f { parameters = parameters ++ [Parameter (Id "__cb__") Nothing]
                              , body = asyncBody body }
           | otherwise = f
       go x = x
@@ -127,9 +127,9 @@ asyncToCall s resultList Application { callee, arguments } tail =
                    }) |]
         where
           tail_ = asyncBody tail
-          resultList_ = map (\(Id i) -> Id $ "__" ++ i) resultList
+          resultList_ = map (\(p@Parameter { parameterId = Id i}) -> p { parameterId = Id $ "__" ++ i}) resultList
           sets = concat $ zipWith go resultList resultList_
-          go (Id i) (Id p)  = [tip| `i_ = `p_ |]
+          go (Parameter { parameterId = Id i}) (Parameter { parameterId = Id p})  = [tip| `i_ = `p_ |]
               where
                 i_ = Expression { expr = Identifier i }
                 p_ = Expression { expr = Identifier p }
