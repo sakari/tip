@@ -96,6 +96,9 @@ instance ToExpression Id where
 instance ToExpression Expression where
     toExpression = id
 
+instance ToExpression Parameter where
+    toExpression Parameter { parameterId } = toExpression parameterId
+
 class ToStatement a where
     toStatement :: a -> Statement
 

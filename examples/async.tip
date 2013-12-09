@@ -3,7 +3,7 @@ fs = require('fs')
 
 // <- does a node style async transformation to the function
 
-test1() {
+test1(cb) {
     a <- fs.readFile('Makefile', 'utf8')
     b <- fs.readFile('tip.cabal', 'utf8')
     yield a.length + b.length
@@ -14,7 +14,7 @@ test1((err, l) {
 })
 
 // errors
-test2() {
+test2(cb) {
     p <- fs.readFile('nonexisting', 'utf8')
     yield p
 }
@@ -23,7 +23,7 @@ test2((err) {
     assert(err, 'error is forwarded')
 })
 
-test3() {
+test3(cb) {
     p <- fs.readFile('Makefile')
     var k = 1
     r = 2
@@ -35,7 +35,7 @@ test3((err, k, r) {
     assert(r == 2, 'as are non var variables')
 })
 
-test4(done) {
+test4(done, cb) {
     a(cb) {
 	process.nextTick(() {
 	    done(p) //this should have the result from the lhs of the async arrow

@@ -108,25 +108,32 @@ asyncTransform ast = everywhere (mkT go) ast
     where
       go :: Expr -> Expr
       go f@Function { parameters, body }
-          | isAsync body = f { parameters = parameters ++ [Parameter (Id "__cb__") Nothing]
-                             , body = asyncBody body }
+          | isAsync body = f { body = asyncBody cb body }
           | otherwise = f
+          where
+            cb = case reverse parameters of
+                   (f:_) -> f
+                   [] -> error $ "missing callback for async function"
       go x = x
-asyncBody ((s@Statement { stmt = Async { resultList, asyncCall}}):ss) =
-    asyncToCall s resultList (expr asyncCall) ss
-asyncBody ((s@Statement { stmt = YieldStmt y }):_) =
-    [tip| return __cb__(null, `y) |]
-asyncBody (s:ss) = s : asyncBody ss
-asyncBody [] = []
 
-asyncToCall s resultList Application { callee, arguments } tail =
+asyncBody cb ((s@Statement { stmt = Async { resultList, asyncCall}}):ss) =
+    asyncToCall cb s resultList (expr asyncCall) ss
+
+asyncBody cb ((s@Statement { stmt = YieldStmt y }):_) =
+    [tip| return `cb(null, `y) |]
+
+asyncBody cb (s:ss) = s : asyncBody cb ss
+
+asyncBody cb [] = []
+
+asyncToCall cb s resultList Application { callee, arguments } tail =
     [tip| `callee (`arguments, (err, `resultList_) {
                      `sets
-                     if(err) { return __cb__(err) }
+                     if(err) { return `cb(err) }
                      else { `tail_ }
                    }) |]
         where
-          tail_ = asyncBody tail
+          tail_ = asyncBody cb tail
           resultList_ = map (\(p@Parameter { parameterId = Id i}) -> p { parameterId = Id $ "__" ++ i}) resultList
           sets = concat $ zipWith go resultList resultList_
           go (Parameter { parameterId = Id i}) (Parameter { parameterId = Id p})  = [tip| `i_ = `p_ |]
@@ -135,7 +142,7 @@ asyncToCall s resultList Application { callee, arguments } tail =
                 p_ = Expression { expr = Identifier p }
 
 
-asyncToCall _ _ _ _ = error "you should really use a function call on rhs of async arrow"
+asyncToCall _ _ _ _ _ = error "you should really use a function call on rhs of async arrow"
 
 isAsync body = any go body
     where
