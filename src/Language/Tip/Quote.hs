@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns, TemplateHaskell, RankNTypes #-}
 module Language.Tip.Quote (tip, tipE) where
-import Language.Tip.Parser (parseStatementList, parseExpression)
+import Language.Tip.Parser (parseStatementList, parseExpression, parser)
 import Language.Tip.Ast
 import Text.Parsec
 import Data.Generics
@@ -9,6 +9,12 @@ import Language.Haskell.TH.Quote
 import Data.ByteString.UTF8 hiding (foldl)
 import Control.Applicative hiding ((<|>), many, optional)
 import Control.Monad
+
+tipModule = QuasiQuoter { quoteExp = quoteModule }
+    where
+      quoteModule str = do
+        x <- parseTipModule $ fromString str
+        dataToExpQ antiQuote x
 
 tipE = QuasiQuoter
        { quoteExp = quoteExpression }
@@ -91,3 +97,7 @@ parseTipStatement str = case parse (parseStatementList <* eof) "" str of
 parseTipExpression str = case parse (parseExpression <* eof) "" str of
                            Left e -> fail $ show e
                            Right r -> return r
+
+parseTipModule str = case parse (parser "nofile" <* eof) "" str of
+                       Left e -> fail $ show e
+                       Right r -> return r

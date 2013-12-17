@@ -195,8 +195,8 @@ parseStatement = Statement
       yield = YieldStmt <$> (reserved t "yield" *> commaSep t parseExpression)
       ret = ReturnStmt <$> (reserved t "return" *> optionMaybe parseExpression)
       expr = ExpressionStmt <$> parseExpression
-parser path = Module path <$> (whiteSpace t *> many parseStatement <* eof)
 
+parser path = Module path <$> (whiteSpace t *> many parseStatement <* eof)
 
 parse :: FilePath -> IO (Either ParseError Module)
 parse path = parseFromFile (parser path) path

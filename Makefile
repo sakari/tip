@@ -11,8 +11,11 @@ all : build
 	$(MAKE) test
 
 test: $(tests) $(failing)
+	cabal test
 
-build:
+build: configure
 	cabal build
 
-.PHONY: test build
+configure:
+	cabal configure --enable-test
+.PHONY: test build configure
