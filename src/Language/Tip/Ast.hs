@@ -5,6 +5,10 @@ import Data.Typeable
 import Data.Data
 import Text.Parsec hiding (getPosition)
 
+srcLine a = sourceLine a
+srcName a = sourceName a
+srcColumn a = sourceColumn a
+
 data Module = Module {
       moduleFilePath :: FilePath
     , moduleStatements :: [Statement]

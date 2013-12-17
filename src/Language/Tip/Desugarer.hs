@@ -1,12 +1,14 @@
 {-# LANGUAGE NamedFieldPuns, QuasiQuotes, RankNTypes #-}
-module Language.Tip.Desugarer (desugar, freeVars, explicitVars ) where
+module Language.Tip.Desugarer (precheck, pregenerate) where
 import Data.Generics
 import Data.List (find)
 import Language.Tip.Ast
 import Language.Tip.Quote
+import Language.Tip.Symbols
 import qualified Data.Set as Set
 
-desugar ast = classToFunc $ asyncTransform $ explicitVars $ explicitReturns ast
+precheck ast = explicitVars $ explicitReturns ast
+pregenerate ast = classToFunc $ asyncTransform ast
 
 classToFunc ast = mkT go `everywhere` ast
     where
@@ -42,23 +44,7 @@ classToFunc ast = mkT go `everywhere` ast
                     | otherwise = False
       go a = a
 
-freeVars ast = varUses `Set.difference` varDecls
-    where
-      varUses = (everythingBut Set.union $ mkQ (Set.empty, False) ident `extQ` async ) ast
-      ident Function {} = (Set.empty, True)
-      ident Identifier { identifierName } = (Set.singleton identifierName, False)
-      ident _ = (Set.empty, False)
-
-      async Async { resultList } = (Set.fromList $ map (idName . parameterId) resultList, False)
-      async _ = (Set.empty, False)
-
-      varDecls = (everythingBut Set.union $ mkQ (Set.empty, False) vars `extQ` notFun ) ast
-      notFun Function { functionName } = case functionName of
-                                           Nothing -> (Set.empty, True)
-                                           Just n -> (Set.singleton $ idName n, True)
-      notFun _ = (Set.empty, False)
-      vars VarStmt { varId } = ( Set.singleton $ idToString varId, False)
-      vars _ = (Set.empty, False)
+freeVars ast = symbols ast `Set.difference` declarations ast
 
 explicitVars m@Module { moduleStatements } = m { moduleStatements = go globals moduleStatements }
     where
@@ -77,9 +63,6 @@ explicitVars m@Module { moduleStatements } = m { moduleStatements = go globals m
             w e = e
             isFun Function {} = True
             isFun _ = False
-
-idToString Id { idName } = idName
-idToString IdQuote { idQuote } = error $ "cannot get id name from quote: " ++ idQuote
 
 everywhereBut' :: Data a => GenericQ Bool -> GenericT -> a -> a
 everywhereBut' q f x

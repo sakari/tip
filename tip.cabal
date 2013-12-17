@@ -24,7 +24,8 @@ library
                        syb ==0.4.*,
                        template-haskell,
                        utf8-string ==0.3.*,
-                       containers ==0.5.0.*
+                       containers ==0.5.0.*,
+                       mtl == 2.1.*
 
 executable tip
   hs-source-dirs:      src
@@ -35,4 +36,5 @@ executable tip
                        syb ==0.4.*,
                        template-haskell,
                        utf8-string ==0.3.*,
-                       containers ==0.5.0.*
+                       containers ==0.5.0.*,
+                       mtl == 2.1.*
