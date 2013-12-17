@@ -1,5 +1,5 @@
 {-# LANGUAGE NamedFieldPuns, TemplateHaskell, RankNTypes #-}
-module Language.Tip.Quote (tip, tipE) where
+module Language.Tip.Quote (tip, tipE, tipModule) where
 import Language.Tip.Parser (parseStatementList, parseExpression, parser)
 import Language.Tip.Ast
 import Text.Parsec
