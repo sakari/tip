@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns, GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns, GeneralizedNewtypeDeriving, MultiParamTypeClasses, DeriveDataTypeable #-}
 module Language.Tip.Types (infer) where
 
 import Data.Generics
@@ -28,9 +28,9 @@ infer Ast.Module { Ast.moduleStatements } = result
 
 pretty :: TypingError -> String
 pretty NotSubtype { sub, super, at } = concat $ intersperse " " [
-                                        prettyType sub, "does not fit"
-                                       , prettyType super,  "at"
-                                       , position ]
+                                        "expected", prettyType super
+                                       , "got", prettyType sub
+                                       ,  "at", position ]
     where
       position = sourceName at ++ ":" ++ show (sourceLine at) ++ " column " ++ show (sourceColumn at)
 
@@ -38,18 +38,28 @@ prettyType = go
     where
       go StringType = "string"
       go NumberType = "number"
+      go Void = "void"
+      go Function { parameters, returnType } = "(" ++ ps ++ ")" ++ ret
+          where
+            ps = concat $ intersperse ", " $ map prettyType parameters
+            ret = " -> " ++ prettyType returnType
+      go Reference {} = "@"
+      go ConstrainedType { minimum = Nothing } = "<undefined>"
+      go ConstrainedType { minimum = Just t } = prettyType t
+      go t = error $ "missing prettyType case: " ++ show t
 
 data Constraint = Constraint { constraintPosition :: SourcePos, constraintType :: Ty }
-                deriving (Show)
+                deriving (Show, Data, Typeable)
 
 data Ty = StringType
         | NumberType
         | Structure { structure :: Map.Map String Ty }
         | Function { parameters :: [Ty], returnType :: Ty }
         | Reference { ref :: Ref }
+        | Void
         | ConstrainedType { constraints :: [Constraint]
                           , minimum :: Maybe Ty }
-          deriving (Show)
+          deriving (Show, Data, Typeable)
 
 data TypingError = NotSubtype { sub :: Ty,  super :: Ty, at :: SourcePos }
                  deriving (Show)
@@ -61,7 +71,7 @@ data Env = Env { errors :: [TypingError]
 emptyEnv = Env { errors = [], env = Map.empty, position = newPos "" 0 0  }
 
 newtype TypingM a = TypingM { typingM :: ScopeT (State Env) a }
-    deriving (Monad, Functor, ScopeMonad)
+    deriving (Monad, Functor, ScopeMonad, Applicative)
 
 instance MonadState Env TypingM where
     get = TypingM $ lift $ get
@@ -97,7 +107,7 @@ typeExpression e@Ast.Expression { Ast.expr, Ast.exprType } = atPosition pos $
       typed Nothing x_type = return x_type
       typed (Just t) x_type = do
         assignedType <- typeLiteral t
-        (x_type', assigned') <- x_type |> assignedType
+        (x_type', assigned') <- x_type <| assignedType
         return assigned'
 
       go Ast.Identifier { Ast.identifierName } = do
@@ -129,6 +139,10 @@ typeLiteral t = go t
     where
       go Ast.NumberType = return NumberType
       go Ast.StringType = return StringType
+      go Ast.FunType { Ast.parameterTypes, Ast.funReturnType = Nothing } =
+        Function <$> mapM typeLiteral parameterTypes <*> return Void
+      go Ast.FunType { Ast.parameterTypes, Ast.funReturnType = Just t } =
+          Function <$> mapM typeLiteral parameterTypes <*> typeLiteral t
       go t = error $ "missing typeliteral case: " ++ show t
 
 typeof :: Ref -> TypingM Ty
@@ -144,10 +158,34 @@ asserttype r t = modify w >> return t
       w e@Env { env } = e { env = Map.insert r t env }
 
 mismatch :: Ty -> Ty -> TypingM ()
-mismatch l r = modify w
+mismatch l r = do
+  l_concrete <- concretize l
+  r_concrete <- concretize r
+  go l_concrete r_concrete
     where
-      w e@Env { errors, position } = e { errors = k position:errors }
-      k p = NotSubtype { super = l, sub = r, at = p }
+      go l r = modify w
+          where
+            w e@Env { errors, position } = e { errors = k position:errors }
+            k p = NotSubtype { super = l, sub = r, at = p }
+
+concretize :: Ty -> TypingM Ty
+concretize ty = everywhereM (mkM go) ty
+    where
+      go Reference { ref } = typeof ref >>= concretize
+      go x = return x
+
+-- Constrain types with a subtyping relation
+--
+-- subtype <| supertype
+--
+-- where subtype is a type that can be used everywhere where supertype can be used
+-- eg. for structures the subtype has at least the fields the supertype has
+--
+
+(<|) :: Ty -> Ty -> TypingM (Ty, Ty)
+l <| r = do
+  (r', l') <- r |> l
+  return (l', r')
 
 (|>) :: Ty -> Ty -> TypingM (Ty, Ty)
 l |> r = go l r
@@ -166,14 +204,12 @@ l |> r = go l r
 
       go StringType StringType = return (StringType, StringType)
       go NumberType NumberType = return (NumberType, NumberType)
-      go StringType NumberType = mismatch l r >> return (StringType, NumberType)
-      go NumberType StringType = mismatch l r >> return (StringType, NumberType)
 
       go c@ConstrainedType { minimum = Nothing, constraints } _ = do
         r_c <- constraint r
         return (c { constraints = r_c : constraints }, r)
 
-      go c@ConstrainedType { minimum = Just t, constraints } _ = do
+      go c@ConstrainedType { minimum = Just t, constraints } r = do
         (l', r') <- t |> r
         r_c <- constraint r'
         let c_new = c { minimum = Just l', constraints = r_c:constraints }
@@ -186,12 +222,18 @@ l |> r = go l r
           where
             c_new = c { minimum = Just l }
 
-      go _ c@ConstrainedType { constraints, minimum = Just t } = do
+      go l c@ConstrainedType { constraints, minimum = Just t } = do
         (l', t') <- l |> t
         let c_new = c { minimum = Just t' }
         solve c_new
         return (l', c_new)
 
+      go Function { parameters = p_l, returnType = r_l }
+         Function { parameters = p_r, returnType = r_r } = do
+           p_zip <- mapM (uncurry (|>)) $ zip p_l p_r
+           r_zip <- r_l |> r_r
+           return (Function { parameters = map fst p_zip, returnType = fst r_zip}
+                  , Function { parameters = map snd p_zip, returnType = snd r_zip } )
       go lhs rhs = mismatch l r >> return (lhs, rhs)
 
 constraint :: Ty -> TypingM Constraint

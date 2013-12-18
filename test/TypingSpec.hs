@@ -27,7 +27,19 @@ spec = do
                                typeError $ [tipModule| a : number = "string value" |]
          it "passes on correct string type" $ do
                                ok $ [tipModule| a : string = "string value" |]
-         it "checks that application is to a function type" $ do
-                               typeError $ [tipModule| a : number; a(1) |]
-         it "accepts correctly typed application" $ do
-                               ok [tipModule| a: (number); a(a) |]
+
+         describe "applications" $ do
+                               it "checks that application is to a function type" $ do
+                                     typeError $ [tipModule| a : number; a(1) |]
+                               it "accepts correctly typed application" $ do
+                                     ok [tipModule| a: (number); a(1) |]
+                               it "checks the return type" $ do
+                                     typeError $ [tipModule|
+                                                  a : (number) -> number
+                                                  b : string
+                                                  b = a(1) |]
+                               it "succeeds if the return type is ok" $ do
+                                     ok $ [tipModule|
+                                           a : (number) -> number
+                                           b : number
+                                           b = a(1) |]

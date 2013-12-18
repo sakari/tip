@@ -1,11 +1,13 @@
-{-# LANGUAGE NamedFieldPuns, MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns, MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 module Language.Tip.Scope (Ref, ScopeMonad(..), ScopeT, runScope ) where
 import Control.Monad.State
 import qualified Data.Map as Map
 import Data.Maybe
+import Data.Generics
+import Control.Applicative
 
 newtype Ref = Ref { ref :: Integer }
-    deriving (Ord, Eq, Show)
+    deriving (Ord, Eq, Show, Typeable, Data)
 
 class ScopeMonad m where
     scope :: [String] -> m a -> m a
@@ -15,7 +17,7 @@ class ScopeMonad m where
 data Env = Env { scopes :: [Scope], freeRef :: Integer }
 
 newtype ScopeT m a = ScopeT { scopeT :: StateT Env m a}
-    deriving (Monad, Functor)
+    deriving (Monad, Functor, Applicative)
 
 type Scope = Map.Map String Ref
 
