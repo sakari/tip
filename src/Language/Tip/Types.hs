@@ -102,6 +102,16 @@ typeExpression e@Ast.Expression { Ast.expr, Ast.exprType } = go expr >>= typed e
         lhs_t |> rhs_t
         return lhs_t
 
+      go Ast.Application { Ast.callee, Ast.arguments } = do
+        t <- typeExpression callee
+        args <- mapM typeExpression arguments
+        r <- fresh
+        let ref = ExpressionType { expr = e, ty = Reference { ref = r } }
+            c = ExpressionType { expr = e, ty = Function { parameters = args, returnType = ref }}
+        c |> t
+        return ref
+      go x = error $ "typeExpression missing case for: " ++ show x
+
 typeLiteral :: Ast.Type -> TypingM Ty
 typeLiteral t = go t
     where

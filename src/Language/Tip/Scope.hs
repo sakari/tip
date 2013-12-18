@@ -10,6 +10,7 @@ newtype Ref = Ref { ref :: Integer }
 class ScopeMonad m where
     scope :: [String] -> m a -> m a
     resolve :: String -> m (Maybe Ref)
+    fresh :: m Ref
 
 data Env = Env { scopes :: [Scope], freeRef :: Integer }
 
@@ -22,17 +23,20 @@ instance MonadTrans ScopeT where
     lift = ScopeT . lift
 
 instance (Monad m, Functor m) => ScopeMonad (ScopeT m) where
-    scope names block =  ScopeT $ do
-                       s <- fmap Map.fromList $ mapM w names
-                       modify $ \e -> e { scopes = (s: scopes e) }
-                       r <- scopeT block
-                       modify $ \e -> e { scopes = tail $ scopes e }
-                       return r
-        where
-          w name = do
-            r <- gets freeRef
-            modify $ \e -> e { freeRef = r + 1 }
-            return (name, Ref r)
+    fresh = ScopeT $ do
+      r <- gets freeRef
+      modify $ \e -> e { freeRef = r + 1 }
+      return $ Ref r
+
+    scope names block =  do
+      let w name = (\r -> (name,r)) `fmap` fresh
+      s <- fmap Map.fromList $ mapM w names
+      ScopeT $ do
+        modify $ \e -> e { scopes = (s: scopes e) }
+        r <- scopeT block
+        modify $ \e -> e { scopes = tail $ scopes e }
+        return r
+
     resolve k = ScopeT $ gets w
         where
           w Env { scopes } = case mapMaybe (Map.lookup k) scopes of
